@@ -50,40 +50,49 @@ function register_message_listener() {
 	)
 }	
 
+const observerLimit = 1000;
+var registeredObservers = 0;
+function availableObserver() {
+    // log('registered observers: ', registeredObservers);
+    return (registeredObservers < observerLimit);
+}
+
 // -- Register a Mutation Observer to monitor changes and additions of <audio/> and <video/> elements
 function register_observer() {
+    registeredObservers = registeredObservers + 1;
 	var observer = new MutationObserver(
 		function(mutations) {
 			var needs_update = false;
 			mutations.forEach(
-				function(mutation) {
-					//log('mutation.type: ' + mutation.type);
-					if (mutation.type == 'attributes') {
-						// This can cause a loop!
-						//if (check_node(mutation.target)) needs_update = true;
-					} else {
+				  function(mutation) {
+            // log('mutation type: ' + mutation.type);
 						for (var i = 0; i < mutation.addedNodes.length; i++) {
-							if (check_node(mutation.addedNodes[i])) needs_update = true;
+							  if (check_node(mutation.addedNodes[i], mutation.type)) needs_update = true;
 						}
-					}
-				}
+				  }
 			);
-			if (needs_update) update_all_sinks();
+			  if (needs_update) {
+            log('Updating all sinks');
+            update_all_sinks();
+        }
 		}
 	);
+
+    // Observer does not need to listen for attributes or characterData
+    // mutations. Save some processing.
 	observer.observe(document.documentElement, {
 		childList: true,
 		subtree: true,
-		attributes: true,
-		characterData: true
+		attributes: false,
+		characterData: false
 	});
 }
 
-function check_node(node) {
+function check_node(node, mtype) {
 	var name = node.nodeName;
-	var attributes = node.attributes
+	  var attributes = node.attributes;
 	if ((name == 'AUDIO') || (name == 'VIDEO')) {
-		log('node added/changed: ' + name);
+		log( mtype + ' node added/changed: ' + name);
 		return true;
 	}
 	return false;
@@ -142,6 +151,10 @@ function with_or_without_GUM() {
 	}	
 }
 
+// TODO: Reset all promises when navigating to new location
+//       The promises all try to update_all_sinks on a single audio/video node
+//       which can cause cpu throttling.
+//       Future quick-fix, limit max number of promises per observer. or observers.
 function update_all_sinks() {
 	var promises = [];
 	var allMedia = document.querySelectorAll('audio,video');
@@ -167,7 +180,9 @@ function update_all_sinks() {
 	} else {
 		log('No sinks found');
 	}
-	register_observer();
+    if (availableObserver()){
+        register_observer();
+    }
 }
 
 // -- main ---------------------------------------------------------------
