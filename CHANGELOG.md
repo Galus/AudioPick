@@ -1,5 +1,9 @@
 # CHANGELOG
 
+### AudioPick-0.2.3 - 2019-08-17
+- removed characterData and attribute observers to mitgate cpu throttling issue
+- identified bug when navigating to new location, old promises all attack the SAME audo/video sinkId. TODO: Fix
+
 ### AudioPick-0.2.2 - 2016-05-21
 - going stable
 - revert `page_action back` to `browser_action`
